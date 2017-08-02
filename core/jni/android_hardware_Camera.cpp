@@ -95,6 +95,7 @@ public:
     void setCallbackMode(JNIEnv *env, bool installed, bool manualMode);
     sp<Camera> getCamera() { Mutex::Autolock _l(mLock); return mCamera; }
     bool isRawImageCallbackBufferAvailable() const;
+    bool isDngImageCallbackBufferAvailable() const;
     void release();
 
 private:
@@ -121,6 +122,7 @@ private:
      * with raw image callbacks.
      */
     Vector<jbyteArray> mRawImageCallbackBuffers;
+    Vector<jbyteArray> mDngImageCallbackBuffers; //OnePlus
 
     /*
      * Application-managed preview buffer queue and the flags
@@ -135,6 +137,11 @@ private:
 bool JNICameraContext::isRawImageCallbackBufferAvailable() const
 {
     return !mRawImageCallbackBuffers.isEmpty();
+}
+
+bool JNICameraContext::isDngImageCallbackBufferAvailable() const //OnePlus
+{
+    return !mDngImageCallbackBuffers.isEmpty();
 }
 
 sp<Camera> get_native_camera(JNIEnv *env, jobject thiz, JNICameraContext** pContext)
@@ -282,6 +289,8 @@ void JNICameraContext::copyAndPost(JNIEnv* env, const sp<IMemory>& dataPtr, int 
 
             if (msgType == CAMERA_MSG_RAW_IMAGE) {
                 obj = getCallbackBuffer(env, &mRawImageCallbackBuffers, size);
+            } else if (msgType == CAMERA_MSG_DNG_IMAGE) {  //OnePlus
+                obj = getCallbackBuffer(env, &mDngImageCallbackBuffers, size);
             } else if (msgType == CAMERA_MSG_PREVIEW_FRAME && mManualBufferMode) {
                 obj = getCallbackBuffer(env, &mCallbackBuffers, size);
 
@@ -349,6 +358,16 @@ void JNICameraContext::postData(int32_t msgType, const sp<IMemory>& dataPtr,
             }
             break;
 
+        case CAMERA_MSG_DNG_IMAGE: //OnePlus
+            ALOGV("dngCallback");
+            if (mDngImageCallbackBuffers.isEmpty()) {
+                env->CallStaticVoidMethod(mCameraJClass, fields.post_event,
+                        mCameraJObjectWeak, dataMsgType, 0, 0, NULL);
+            } else {
+                copyAndPost(env, dataPtr, dataMsgType);
+            }
+            break;
+
         // There is no data.
         case 0:
             break;
@@ -362,7 +381,9 @@ void JNICameraContext::postData(int32_t msgType, const sp<IMemory>& dataPtr,
     // post frame metadata to Java
     if (metadata && (msgType & CAMERA_MSG_PREVIEW_METADATA)) {
         postMetadata(env, CAMERA_MSG_PREVIEW_METADATA, metadata);
-    }
+    }/* else if (metadata && (msgType & CAMERA_MSG_DNG_META_DATA)) { //OnePlus
+        postMetadata(env, CAMERA_MSG_DNG_META_DATA, metadata);
+    }*/
 }
 
 void JNICameraContext::postDataTimestamp(nsecs_t timestamp, int32_t msgType, const sp<IMemory>& dataPtr)
@@ -573,6 +594,11 @@ void JNICameraContext::addCallbackBuffer(
             case CAMERA_MSG_RAW_IMAGE: {
                 jbyteArray callbackBuffer = (jbyteArray)env->NewGlobalRef(cbb);
                 mRawImageCallbackBuffers.push(callbackBuffer);
+                break;
+            }
+            case CAMERA_MSG_DNG_IMAGE: { //OnePlus
+                jbyteArray callbackBuffer = (jbyteArray)env->NewGlobalRef(cbb);
+                mDngImageCallbackBuffers.push(callbackBuffer);
                 break;
             }
             default: {
@@ -942,6 +968,13 @@ static void android_hardware_Camera_takePicture(JNIEnv *env, jobject thiz, jint 
         if (!context->isRawImageCallbackBufferAvailable()) {
             ALOGV("Enable raw image notification, since no callback buffer exists");
             msgType &= ~CAMERA_MSG_RAW_IMAGE;
+            msgType |= CAMERA_MSG_RAW_IMAGE_NOTIFY;
+        }
+    } else if (msgType & CAMERA_MSG_DNG_IMAGE) { //OnePlus
+        ALOGV("Enable dng image callback buffer");
+        if (!context->isDngImageCallbackBufferAvailable()) {
+            ALOGV("Enable dng image notification, since no callback buffer exists");
+            msgType &= ~CAMERA_MSG_DNG_IMAGE;
             msgType |= CAMERA_MSG_RAW_IMAGE_NOTIFY;
         }
     }

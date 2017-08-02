@@ -75,6 +75,11 @@ import java.util.HashMap;
  * the camera service
  */
 public class CameraMetadataNative implements Parcelable {
+    //OnePlus Start
+    public long getNativeCameraMetadata() {
+        return mMetadataPtr;
+    }
+    //OnePlus End
 
     public static class Key<T> {
         private boolean mHasTag;

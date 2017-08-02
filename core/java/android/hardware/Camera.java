@@ -50,6 +50,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.impl.CaptureResultExtras;
+import android.hardware.camera2.impl.CameraMetadataNative;
+
 import static android.system.OsConstants.*;
 
 /**
@@ -143,7 +149,60 @@ import static android.system.OsConstants.*;
  */
 @Deprecated
 public class Camera {
-    private static final String TAG = "Camera";
+    //OnePlus Start
+    private static final int CAMERA_HAL_API_VERSION_OP_SERVICE = -100;
+    private static final int CAMERA_MSG_AEC = 0x4000;
+    private static final int CAMERA_MSG_DNG_IMAGE = 0x8000;
+    private static final int CAMERA_MSG_DNGMETA_DATA = 0x10000;
+    private static final int CAMERA_MSG_IN_PROCESSING = 0x20000;
+
+    private AECallback mAECallback;
+    private boolean mIsOPService = false;
+    private CameraMetadataNative mMetadata;
+    private long mMetadataPtr;
+    private PictureCallback mOPServiceJpegCallback = null;
+    private OneplusCallback mOneplusCallback;
+    private ProcessCallback mProcessCallback;
+
+    public static abstract interface AECallback {
+        public abstract void onAEChanged(int[] states, Camera camera);
+    }
+
+    public static abstract interface ProcessCallback {
+        public abstract void onProcess();
+    }
+
+    public static abstract interface OneplusCallback {
+        public abstract void onDngImage(byte[] data, Camera camera);
+        public abstract void onDngMetadata(CameraCharacteristics characteristics, CaptureResult result, Camera camera);
+    }
+
+    public static Camera openOPService() {
+        return new Camera(-1, CAMERA_HAL_API_VERSION_OP_SERVICE);
+    }
+
+    public final void addDngImageCallbackBuffer(byte[] callbackBuffer) {
+        addCallbackBuffer(callbackBuffer, CAMERA_MSG_DNG_IMAGE);
+    }
+
+    public void setAECallback(AECallback cb) {
+        mAECallback = cb;
+    }
+
+    public void setOPJpegCallback(PictureCallback cb) {
+        mOPServiceJpegCallback = cb;
+    }
+
+    public void setOneplusCallback(OneplusCallback cb) {
+        mOneplusCallback = cb;
+    }
+
+    public void setProcessCallback(ProcessCallback cb) {
+        mProcessCallback = cb;
+    }
+    //OnePlus End
+
+    private static final String TAG = "Camera";    
 
     // These match the enums in frameworks/base/include/camera/Camera.h
     private static final int CAMERA_MSG_ERROR            = 0x001;
@@ -515,6 +574,10 @@ public class Camera {
         mCameraDataCallback = null;
         mCameraMetaDataCallback = null;
         /* ### QC ADD-ONS: END */
+        //OnePlus Start
+        mOneplusCallback = null;
+        mProcessCallback = null;
+        //OnePlus End
 
         Looper looper;
         if ((looper = Looper.myLooper()) != null) {
@@ -539,6 +602,9 @@ public class Camera {
                 }
             }
         }
+        //OnePlus Start
+        mIsOPService = (halVersion == CAMERA_HAL_API_VERSION_OP_SERVICE);
+        //OnePlus End
         return native_setup(new WeakReference<Camera>(this), cameraId, halVersion, packageName);
     }
 
@@ -810,6 +876,9 @@ public class Camera {
         mFaceDetectionRunning = false;
 
         mShutterCallback = null;
+        //OnePlus Start
+        mProcessCallback = null;
+        //OnePlus End
         mRawImageCallback = null;
         mPostviewCallback = null;
         mJpegCallback = null;
@@ -1006,7 +1075,8 @@ public class Camera {
     {
         // CAMERA_MSG_VIDEO_FRAME may be allowed in the future.
         if (msgType != CAMERA_MSG_PREVIEW_FRAME &&
-            msgType != CAMERA_MSG_RAW_IMAGE) {
+            msgType != CAMERA_MSG_RAW_IMAGE &&
+            msgType != CAMERA_MSG_DNG_IMAGE) { //OnePlus
             throw new IllegalArgumentException(
                             "Unsupported message type: " + msgType);
         }
@@ -1163,6 +1233,13 @@ public class Camera {
                 }
                 return;
 
+//OnePlus Start
+            case CAMERA_MSG_IN_PROCESSING:
+                if (mProcessCallback != null) {
+                    mProcessCallback.onProcess();
+                }
+//OnePlus End
+
             case CAMERA_MSG_RAW_IMAGE:
                 if (mRawImageCallback != null) {
                     mRawImageCallback.onPictureTaken((byte[])msg.obj, mCamera);
@@ -1250,6 +1327,33 @@ public class Camera {
                     mCameraMetaDataCallback.onCameraMetaData((byte[])msg.obj, mCamera);
                 }
                 return;
+
+//OnePlus Start
+            case CAMERA_MSG_AEC:
+                if (mAECallback != null) {
+                    int[] states = new int[2];
+                    states[0] = msg.arg1;
+                    states[1] = msg.arg2;
+                    mAECallback.onAEChanged(states, mCamera);
+                }
+                return;
+
+            case CAMERA_MSG_DNG_IMAGE:
+                if (mOneplusCallback != null) {
+                    mOneplusCallback.onDngImage((byte[])msg.obj, mCamera);
+                }
+                return;
+
+            case CAMERA_MSG_DNGMETA_DATA:
+                if (mOneplusCallback != null) {
+                    CameraCharacteristics characteristics = new CameraCharacteristics(new CameraMetadataNative(mMetadata));
+                    CaptureRequest request = new CaptureRequest.Builder(new CameraMetadataNative(mMetadata), false, -1).build();
+                    CaptureResult result = new CaptureResult(new CameraMetadataNative(mMetadata), request, new CaptureResultExtras(-1, -1, -1, -1, -1, -1, -1));
+                    mOneplusCallback.onDngMetadata(characteristics, result, mCamera);
+                }
+                return;
+//OnePlus End
+
             /* ### QC ADD-ONS: END */
             default:
                 Log.e(TAG, "Unknown message type " + msg.what);
@@ -1530,6 +1634,19 @@ public class Camera {
         if (mJpegCallback != null) {
             msgType |= CAMERA_MSG_COMPRESSED_IMAGE;
         }
+
+        //OnePlus Start
+        if (mOneplusCallback != null) {
+            msgType |= CAMERA_MSG_DNGMETA_DATA;
+            mMetadata = new CameraMetadataNative();
+            mMetadataPtr = mMetadata.getNativeCameraMetadata();
+            msgType |= CAMERA_MSG_DNG_IMAGE;
+            Log.d("Camera", "enable dng capture");
+        }
+        if (mProcessCallback != null) {
+            msgType |= CAMERA_MSG_IN_PROCESSING;
+        }
+        //OnePlus End
 
         native_takePicture(msgType);
         mFaceDetectionRunning = false;
@@ -1894,6 +2011,14 @@ public class Camera {
          */
         public int id = -1;
 
+//OnePlus Start
+        public int isSmile = 0;
+
+        public int getIsSmile() {
+            return isSmile;
+        }
+//OnePlus End
+
         /**
          * The coordinates of the center of the left eye. The coordinates are in
          * the same space as the ones for {@link #rect}. This is an optional
@@ -2162,6 +2287,7 @@ public class Camera {
     {
         native_stopLongshot();
     }
+
     private native final void native_stopLongshot();
 
      /** @hide
@@ -2459,6 +2585,9 @@ public class Camera {
 
         private static final String TRUE = "true";
         private static final String FALSE = "false";
+
+        //OnePlus
+        private static final String KEY_QC_SMILE_DETECTION = "smile-detection";
 
         // Values for white balance settings.
         public static final String WHITE_BALANCE_AUTO = "auto";
@@ -4116,6 +4245,13 @@ public class Camera {
             String str = get(KEY_SMOOTH_ZOOM_SUPPORTED);
             return TRUE.equals(str);
         }
+
+        //OnePlus Start
+        public boolean isSupportedSmileDetection() {
+            String str = get(KEY_QC_SMILE_DETECTION);
+            return TRUE.equals(str);
+        }
+        //OnePlus End
 
         /**
          * <p>Gets the distances from the camera to where an object appears to be
