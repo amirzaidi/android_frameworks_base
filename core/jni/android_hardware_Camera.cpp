@@ -381,9 +381,7 @@ void JNICameraContext::postData(int32_t msgType, const sp<IMemory>& dataPtr,
     // post frame metadata to Java
     if (metadata && (msgType & CAMERA_MSG_PREVIEW_METADATA)) {
         postMetadata(env, CAMERA_MSG_PREVIEW_METADATA, metadata);
-    }/* else if (metadata && (msgType & CAMERA_MSG_DNG_META_DATA)) { //OnePlus
-        postMetadata(env, CAMERA_MSG_DNG_META_DATA, metadata);
-    }*/
+    }
 }
 
 void JNICameraContext::postDataTimestamp(nsecs_t timestamp, int32_t msgType, const sp<IMemory>& dataPtr)

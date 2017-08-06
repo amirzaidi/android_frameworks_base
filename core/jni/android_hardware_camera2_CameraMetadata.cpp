@@ -225,6 +225,7 @@ static jlong CameraMetadata_allocateCopy(JNIEnv *env, jobject thiz,
 
 static jboolean CameraMetadata_isEmpty(JNIEnv *env, jobject thiz) {
     ALOGV("%s", __FUNCTION__);
+    return JNI_FALSE;
 
     CameraMetadata* metadata = CameraMetadata_getPointerThrow(env, thiz);
 
