@@ -1842,7 +1842,7 @@ public class InputMethodManagerService extends IInputMethodManager.Stub
                         .setContentIntent(mImeSwitchPendingIntent);
                 try {
                     if ((mNotificationManager != null)
-                            && !mIWindowManager.hasNavigationBar()) {
+                            && !mIWindowManager.hasNavigationBar() && false) {
                         if (DEBUG) {
                             Slog.d(TAG, "--- show notification: label =  " + summary);
                         }
