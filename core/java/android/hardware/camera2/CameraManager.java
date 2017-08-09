@@ -251,14 +251,6 @@ public final class CameraManager {
                     // Normal path: Get the camera characteristics directly from the camera service
                     CameraMetadataNative info = cameraService.getCameraCharacteristics(id);
 
-                    //OnePlus Start
-                    String packageName = ActivityThread.currentPackageName();
-                    if (packageName != null && packageName.equals("com.oneplus.camera")) {
-                        Log.d("CameraManager", "packageName = " + packageName);
-                        info.set(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL, API_VERSION_2);
-                    }
-                    //OnePlus End
-
                     characteristics = new CameraCharacteristics(info);
                 }
             } catch (ServiceSpecificException e) {
