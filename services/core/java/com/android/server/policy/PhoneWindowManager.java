@@ -2581,7 +2581,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             }
 
             final boolean ANBIEnabled = Settings.System.getIntForUser(resolver,
-                    Settings.System.ANBI_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
+                    Settings.System.ANBI_ENABLED, 1, UserHandle.USER_CURRENT) == 1;
             if (mANBIHandler != null) {
                 if (mANBIEnabled != ANBIEnabled) {
                     mANBIEnabled = ANBIEnabled;
