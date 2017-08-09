@@ -251,6 +251,12 @@ public final class CameraManager {
                     // Normal path: Get the camera characteristics directly from the camera service
                     CameraMetadataNative info = cameraService.getCameraCharacteristics(id);
 
+                    String packageName = ActivityThread.currentPackageName();
+                    if (packageName != null && packageName.equals("com.oneplus.camera") && android.os.Build.DEVICE.equals("oneplus3")) {
+                        Log.d("CameraManager", "Using legacy HAL for OnePlus 3 camera application");
+                        info.set(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY);
+                    }
+
                     characteristics = new CameraCharacteristics(info);
                 }
             } catch (ServiceSpecificException e) {
