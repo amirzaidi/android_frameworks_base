@@ -1754,13 +1754,7 @@ public class InputMethodManagerService extends IInputMethodManager.Stub
                 ++nonAuxCount;
             } else if (imi.getPackageName().equals("com.google.android.inputmethod.latin")) {
                 ++nonAuxCount;
-                for (int j = 0; j < subtypeCount; ++j) {
-                    final InputMethodSubtype subtype = subtypes.get(j);
-                    if (subtype.isAuxiliary()) {
-                        ++auxCount;
-                        auxSubtype = subtype;
-                    }
-                }
+                nonAuxSubtype = subtypes.get(0);
             } else {
                 for (int j = 0; j < subtypeCount; ++j) {
                     final InputMethodSubtype subtype = subtypes.get(j);
