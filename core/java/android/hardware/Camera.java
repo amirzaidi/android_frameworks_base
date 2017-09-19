@@ -254,6 +254,7 @@ public class Camera {
     
     public void setOPJpegCallback(PictureCallback cb) {
         mOPServiceJpegCallback = cb;
+        Log.e(TAG, "set op jpeg callback");
     }
     
     public final void addDngImageCallbackBuffer(byte[] cb) {
@@ -261,7 +262,7 @@ public class Camera {
     }
     
     public static Camera openOPService() {
-        return null;//return new Camera(-0x1, -0x64);
+        return new Camera(-0x1, -100);
     }
 
     private void getNativeCameraMetadata(int camID){
@@ -628,6 +629,7 @@ public class Camera {
                 }
             }
         }
+        mIsOPService = (halVersion == -100);
         return native_setup(new WeakReference<Camera>(this), cameraId, halVersion, packageName);
     }
 
@@ -1266,12 +1268,17 @@ public class Camera {
                 return;
 
             case CAMERA_MSG_COMPRESSED_IMAGE:
+                Log.d(TAG,"all jpeg callback");
                 if (mJpegCallback != null) {
                     mJpegCallback.onPictureTaken((byte[])msg.obj, mCamera);
+                    Log.d(TAG,"regular jpeg callback");
                 }
                 else if(mIsOPService&&mOPServiceJpegCallback != null){
                     Log.d(TAG,"op jpeg callback");
                     mOPServiceJpegCallback.onPictureTaken((byte[])msg.obj, mCamera);
+                }
+                if(mIsOPService && mOPServiceJpegCallback == null){
+                    Log.d(TAG,"null op jpeg callback");
                 }
                 return;
 

@@ -688,6 +688,10 @@ static jint android_hardware_Camera_native_setup(JNIEnv *env, jobject thiz,
     // save context in opaque field
     env->SetLongField(thiz, fields.context, (jlong)context.get());
 
+    // OnePlus service crashes when doing orientation check
+    if (halVersion == -100) {
+        return NO_ERROR;
+    }
     // Update default display orientation in case the sensor is reverse-landscape
     CameraInfo cameraInfo;
     status_t rc = Camera::getCameraInfo(cameraId, &cameraInfo);
