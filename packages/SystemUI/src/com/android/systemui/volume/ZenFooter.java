@@ -28,13 +28,14 @@ import android.widget.TextView;
 
 import com.android.systemui.R;
 import com.android.systemui.statusbar.policy.ZenModeController;
+import com.android.systemui.tuner.TunerService;
 
 import java.util.Objects;
 
 /**
  * Zen mode information (and end button) attached to the bottom of the volume dialog.
  */
-public class ZenFooter extends LinearLayout {
+public class ZenFooter extends LinearLayout implements TunerService.Tunable {
     private static final String TAG = Util.logTag(ZenFooter.class);
 
     private final Context mContext;
@@ -44,6 +45,7 @@ public class ZenFooter extends LinearLayout {
     private TextView mSummaryLine1;
     private TextView mSummaryLine2;
     private TextView mEndNowButton;
+    private View mPaddingFix;
     private int mZen = -1;
     private ZenModeConfig mConfig;
     private ZenModeController mController;
@@ -64,9 +66,19 @@ public class ZenFooter extends LinearLayout {
         mSummaryLine1 = (TextView) findViewById(R.id.volume_zen_summary_line_1);
         mSummaryLine2 = (TextView) findViewById(R.id.volume_zen_summary_line_2);
         mEndNowButton = (TextView) findViewById(R.id.volume_zen_end_now);
+        mPaddingFix = findViewById(R.id.zen_footer_padding_fix);
         mSpTexts.add(mSummaryLine1);
         mSpTexts.add(mSummaryLine2);
         mSpTexts.add(mEndNowButton);
+        TunerService.get(mContext).addTunable(this, VolumeDialogComponent.VOLUME_DOWN_SILENT);
+    }
+
+    public void onTuningChanged(String key, String newValue) {
+        final boolean showEndNowButton = newValue != null
+            ? Integer.parseInt(newValue) != 0
+            : VolumeDialogComponent.DEFAULT_VOLUME_DOWN_TO_ENTER_SILENT;
+        mEndNowButton.setVisibility(showEndNowButton ? View.VISIBLE : View.GONE);
+        mPaddingFix.setVisibility(showEndNowButton ? View.GONE : View.VISIBLE);
     }
 
     public void init(final ZenModeController controller) {

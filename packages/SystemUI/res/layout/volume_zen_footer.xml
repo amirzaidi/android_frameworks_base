@@ -82,4 +82,9 @@
         android:textColor="?android:attr/colorAccent"
         android:textAppearance="@style/TextAppearance.QS.DetailButton" />
 
+    <View
+        android:id="@+id/zen_footer_padding_fix"
+        android:layout_width="match_parent"
+        android:layout_height="4dp" />
+
 </com.android.systemui.volume.ZenFooter>
