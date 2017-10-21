@@ -76,12 +76,13 @@ public final class SignalTileView extends QSIconView {
         mRoaming.setScaleX(0.4f);
         mRoaming.setScaleY(0.4f);
         mRoaming.setVisibility(View.GONE);
-        LinearLayout iconLayout = new LinearLayout(mContext);
+        /*LinearLayout iconLayout = new LinearLayout(mContext);
 
         iconLayout.addView(mOverlay, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         iconLayout.addView(mRoaming, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
 
-        mIconFrame.addView(iconLayout, LayoutParams.WRAP_CONTENT, mIconLayoutHeight);
+        mIconFrame.addView(iconLayout, LayoutParams.WRAP_CONTENT, mIconLayoutHeight);*/
+        mIconFrame.addView(mOverlay, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
 
         return mIconFrame;
     }
