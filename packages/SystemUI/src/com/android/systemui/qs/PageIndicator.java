@@ -196,7 +196,7 @@ public class PageIndicator extends ViewGroup {
         for (int i = 0; i < N; i++) {
             getChildAt(i).measure(widthChildSpec, heightChildSpec);
         }
-        int width = (mPageIndicatorWidth - mPageDotWidth) * N + mPageDotWidth;
+        int width = (mPageIndicatorWidth - mPageDotWidth) * (N - 1) + mPageDotWidth;
         setMeasuredDimension(width, mPageIndicatorHeight);
     }
 
